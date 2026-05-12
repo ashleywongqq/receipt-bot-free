@@ -9,7 +9,7 @@ app = modal.App("receipt-bot-free")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "google-genai>=0.1.0",
+        "google-generativeai>=0.3.0",
         "httpx>=0.27.0",
         "fastapi[standard]>=0.115.0",
     )
