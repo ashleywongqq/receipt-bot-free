@@ -20,8 +20,8 @@ import google.generativeai
 # Configure once on import
 google.generativeai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-# Model for everything. Flash is fast, free, and good enough for this.
-MODEL_NAME = "gemini-1.5-flash"
+# Model for everything. Use the latest available model.
+MODEL_NAME = "gemini-pro"
 
 
 def _client(use_search: bool = False):
