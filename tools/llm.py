@@ -16,8 +16,8 @@ import google.generativeai as genai
 # Configure once on import
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-# Use gemini-pro which is stable and works on free tier
-MODEL_NAME = "gemini-pro"
+# Use gemini-2.0-flash which is available on free tier
+MODEL_NAME = "models/gemini-2.0-flash"
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:
@@ -36,7 +36,7 @@ def generate_text(prompt: str, max_tokens: int = 1024) -> str:
 def generate_with_image(prompt: str, image_bytes: bytes, mime: str,
                         max_tokens: int = 1024) -> str:
     """Image + text → text. Used for receipt OCR."""
-    model = genai.GenerativeModel("gemini-pro-vision")
+    model = genai.GenerativeModel(MODEL_NAME)
     image_part = {"mime_type": mime, "data": image_bytes}
     resp = model.generate_content(
         [image_part, prompt],
