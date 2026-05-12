@@ -246,11 +246,9 @@ def _persist_and_format(facts: dict, source: str = "photo") -> tuple[str, int]:
     items_str = ("\n" + ", ".join(items[:5])) if items else ""
 
     reply = (
-        f"✅ #{receipt_id} ({source})\n"
-        f"*{vendor}* — {facts['date']}\n"
-        f"{native}{usd_str}\n"
-        f"_{tag}_{items_str}\n\n"
-        f"_undo or 'fix vendor {vendor} tier X'_"
+        f"✅ Logged\n"
+        f"{vendor} • {native}{usd_str}\n"
+        f"{tag}{items_str}\n"
     )
     return reply, receipt_id
 
@@ -449,15 +447,12 @@ def _handle_split(intent: dict) -> str:
     usd_fn = lambda v: f" (${v:.2f})" if currency != "USD" else ""
 
     lines = [
-        f"💸 *split #{pid}* — {vendor}",
-        f"Total: {native_fn(amount)}{usd_fn(total_usd)} split {n_people} ways",
-        f"Your share: {native_fn(user_share)}{usd_fn(user_share_usd)} (receipt #{receipt_id})",
+        f"💸 {vendor} split {n_people} ways",
+        f"Your share: {native_fn(user_share)}{usd_fn(user_share_usd)}",
         f"You're owed: {native_fn(owed_total)}{usd_fn(owed_usd)}",
     ]
     if debtors:
-        per = owed_total / len(debtors)
-        lines.append(f"\nWaiting on: {', '.join(debtors)} ({native_fn(per)} each)")
-    lines.append(f"\n_Reply 'X paid me back' as people settle, or 'remove split {pid}'_")
+        lines.append(f"Waiting on: {', '.join(debtors)}")
     return "\n".join(lines)
 
 
