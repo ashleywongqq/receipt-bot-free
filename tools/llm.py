@@ -15,8 +15,8 @@ import google.genai as genai
 # Configure once on import
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-# Model for everything. gemini-1.5-flash has a higher free quota.
-MODEL_NAME = "gemini-1.5-flash"
+# Model for everything. Using the standard Gemini 2.0 Flash.
+MODEL_NAME = "gemini-2.0-flash"
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:

@@ -72,9 +72,11 @@ def process_message():
     try:
         msg = inbox.get(timeout=1)
     except Exception:
+        print("[process_message] No message in queue")
         return
 
     chat_id = msg["chat_id"]
+    print(f"[process_message] Processing message from {chat_id}: {msg}")
     try:
         if msg["type"] == "photo":
             send_message(chat_id, "📸 reading receipt…")
@@ -83,11 +85,15 @@ def process_message():
             reply = handle_text(msg["text"])
     except Exception as e:
         reply = f"⚠️ error: {type(e).__name__}: {e}"
+        print(f"[process_message] Error: {reply}")
 
     volume.commit()
 
+    print(f"[process_message] Sending reply: {reply[:100]}")
     for chunk in [reply[i:i + 4000] for i in range(0, len(reply), 4000)]:
+        print(f"[process_message] Sending chunk to {chat_id}")
         send_message(chat_id, chunk)
+    print(f"[process_message] Done")
 
 
 @app.function(image=image, secrets=secrets, volumes=VOLUME_MOUNTS)
