@@ -108,20 +108,18 @@ Decide what they want. Reply with ONE of these JSON shapes (no prose, no fences)
    {{"intent": "other"}}
 
 Rules:
-- Vendor names: capitalize properly ("yy kafei" → "YY Kafei").
+- VENDOR NAME: Extract the exact vendor name from the message. If message is "5 starbucks", vendor is "Starbucks". If "150 tatiana", vendor is "Tatiana". EXTRACT THE VENDOR NAME AS WRITTEN.
 - If only one number is present, it's the total.
 - If currency isn't stated, leave null.
 - Date: parse "yesterday", "last Friday", "Mar 14" to YYYY-MM-DD; default today.
 
 Examples:
-  "5 yy kafei" → log
-  "150 tatiana" → log
-  "$800 team dinner 9 people" → split, n_people=9
-  "120 dinner with j and mike" → split, n_people=3, debtors=["j","mike"]
-  "j paid me back" → payback, who="j"
-  "everyone paid" → payback, who="everyone"
-  "who owes me" → list_pending
-  "how much on food this month" → query
+  "5 yy kafei" → vendor="YY Kafei", amount=5
+  "5 starbucks" → vendor="Starbucks", amount=5
+  "150 tatiana" → vendor="Tatiana", amount=150
+  "590 margiela boots" → vendor="Margiela", amount=590
+  "$800 team dinner 9 people" → vendor="Team Dinner", amount=800
+  "120 dinner with j and mike" → vendor="Dinner", amount=120
 
 Return ONLY the JSON.
 """
