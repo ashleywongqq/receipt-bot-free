@@ -15,8 +15,8 @@ from anthropic import Anthropic
 # Configure once on import
 client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-# Model for everything
-MODEL_NAME = "claude-3-5-sonnet-20241022"
+# Model for everything. Haiku is lightweight, fast, and cheap.
+MODEL_NAME = "claude-3-5-haiku-20241022"
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:
