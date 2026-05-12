@@ -21,7 +21,7 @@ import google.generativeai as genai
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Model for everything. Flash is fast, free, and good enough for this.
-MODEL_NAME = "gemini-2.0-flash-exp"
+MODEL_NAME = "gemini-2.0-flash"
 
 
 def _client(use_search: bool = False):
