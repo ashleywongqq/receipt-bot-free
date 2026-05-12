@@ -9,7 +9,7 @@ app = modal.App("receipt-bot-free")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "google-generativeai>=0.8.0",
+        "google-genai>=0.1.0",
         "httpx>=0.27.0",
         "fastapi[standard]>=0.115.0",
     )
@@ -135,3 +135,11 @@ def set_telegram_webhook(url: str = ""):
 def sql(query: str):
     from tools import db
     print(db.run_sql(query))
+
+
+@app.function(image=image, secrets=secrets)
+def check_webhook():
+    import os, httpx, json
+    token = os.environ["TELEGRAM_BOT_TOKEN"]
+    r = httpx.get(f"https://api.telegram.org/bot{token}/getWebhookInfo")
+    print(json.dumps(r.json(), indent=2))
