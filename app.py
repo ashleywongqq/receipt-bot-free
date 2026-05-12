@@ -120,9 +120,9 @@ def daily_nudge():
 
 
 @app.function(image=image, secrets=secrets)
-def set_telegram_webhook():
+def set_telegram_webhook(url: str = ""):
     import os, httpx
-    webhook_url = telegram_webhook.get_web_url()
+    webhook_url = url or telegram_webhook.get_web_url()
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     r = httpx.post(
         f"https://api.telegram.org/bot{token}/setWebhook",
