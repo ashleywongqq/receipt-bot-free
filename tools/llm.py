@@ -16,8 +16,8 @@ import google.generativeai as genai
 # Configure once on import
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-# Use gemini-2.0-flash which is available on free tier
-MODEL_NAME = "models/gemini-2.0-flash"
+# Use gemini-2.5-flash which has free tier quota
+MODEL_NAME = "models/gemini-2.5-flash"
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:
