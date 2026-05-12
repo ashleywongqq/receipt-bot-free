@@ -9,7 +9,7 @@ app = modal.App("receipt-bot-free")
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "google-generativeai>=0.3.0",
+        "anthropic>=0.7.0",
         "httpx>=0.27.0",
         "fastapi[standard]>=0.115.0",
     )
@@ -22,8 +22,8 @@ VOLUME_MOUNTS = {"/data": volume}
 inbox = modal.Queue.from_name("receipt-inbox-free", create_if_missing=True)
 
 secrets = [
-    modal.Secret.from_name("gemini-api-key"),    # GEMINI_API_KEY
-    modal.Secret.from_name("telegram-bot"),      # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+    modal.Secret.from_name("anthropic-api-key"),    # ANTHROPIC_API_KEY
+    modal.Secret.from_name("telegram-bot"),         # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ]
 
 
