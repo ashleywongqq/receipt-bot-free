@@ -15,10 +15,10 @@ Models:
 
 import os
 import base64
-import google.generativeai as genai
+import google.generativeai
 
 # Configure once on import
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+google.generativeai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Model for everything. Flash is fast, free, and good enough for this.
 MODEL_NAME = "gemini-1.5-flash"
@@ -28,13 +28,13 @@ def _client(use_search: bool = False):
     """Build a model client, optionally with Google Search grounding."""
     if use_search:
         # Grounding lets the model search the web when needed
-        return genai.GenerativeModel(
+        return google.generativeai.GenerativeModel(
             MODEL_NAME,
-            tools=[genai.protos.Tool(
-                google_search_retrieval=genai.protos.GoogleSearchRetrieval()
+            tools=[google.generativeai.protos.Tool(
+                google_search_retrieval=google.generativeai.protos.GoogleSearchRetrieval()
             )],
         )
-    return genai.GenerativeModel(MODEL_NAME)
+    return google.generativeai.GenerativeModel(MODEL_NAME)
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:
