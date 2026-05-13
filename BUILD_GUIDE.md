@@ -7,7 +7,7 @@ A personal expense tracker bot that runs on Telegram, using Claude API for LLM p
 - **Frontend**: Telegram (user sends messages/photos)
 - **Compute**: Modal (serverless functions)
 - **Storage**: SQLite on Modal Volume
-- **LLM**: Anthropic Claude API (default: Claude Haiku 3.5)
+- **LLM**: Anthropic Claude API (default: Claude Haiku 4.5)
 - **Code**: Python 3.11
 
 ---
@@ -69,7 +69,7 @@ fastapi[standard]>=0.115.0
 
 **Key Implementation**:
 - Lazily initialize and cache the `Anthropic` client with API key
-- Use `claude-3-5-haiku-20241022` by default
+- Use `claude-haiku-4-5-20251001` by default
 - Allow `ANTHROPIC_MODEL` to override the model without code changes
 - Handle base64 encoding for images
 - Return raw text (JSON parsing happens in worker.py)

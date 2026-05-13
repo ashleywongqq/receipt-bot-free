@@ -152,3 +152,44 @@ def check_webhook():
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     r = httpx.get(f"https://api.telegram.org/bot{token}/getWebhookInfo")
     print(json.dumps(r.json(), indent=2))
+
+
+@app.function(image=image, secrets=secrets)
+def check_anthropic_models():
+    import os, httpx
+
+    r = httpx.get(
+        "https://api.anthropic.com/v1/models",
+        headers={
+            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+            "anthropic-version": "2023-06-01",
+        },
+        timeout=20,
+    )
+    print(f"status={r.status_code}")
+    try:
+        data = r.json()
+    except Exception:
+        print(r.text[:1000])
+        return
+    if r.status_code != 200:
+        print(data)
+        return
+    for model in data.get("data", []):
+        print(model.get("id"))
+
+
+@app.function(image=image, secrets=secrets)
+def check_anthropic_text(model: str = ""):
+    import os
+    from anthropic import Anthropic
+
+    model = model or os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+    client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    resp = client.messages.create(
+        model=model,
+        max_tokens=16,
+        messages=[{"role": "user", "content": "Reply with OK."}],
+    )
+    print(f"model={model}")
+    print(resp.content[0].text)

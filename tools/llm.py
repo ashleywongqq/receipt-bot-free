@@ -17,9 +17,9 @@ The worker only needs three calls:
 All three return raw strings; JSON parsing happens in worker.py.
 """
 
-# Haiku 3.5 is Anthropic's current lightweight Haiku model ID. Allow an env
-# override so the deployed bot can move to Sonnet/Opus without a code change.
-DEFAULT_MODEL_NAME = "claude-3-5-haiku-20241022"
+# Haiku is the lightweight model this account exposes through the Anthropic
+# Models API. Allow an env override so the bot can move models without code.
+DEFAULT_MODEL_NAME = "claude-haiku-4-5-20251001"
 MODEL_NAME = os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL_NAME)
 
 

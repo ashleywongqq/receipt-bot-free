@@ -41,7 +41,7 @@ You need Python 3.11+ installed. Check with `python3 --version`. If not, get it 
 3. Create an API key.
 4. Copy the key (starts with `sk-ant-...`). Save it somewhere safe.
 
-The code defaults to Claude Haiku 3.5 (`claude-3-5-haiku-20241022`) and supports both text and receipt images.
+The code defaults to Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) and supports both text and receipt images.
 
 ### Chunk 3 — Create a Telegram bot (10 min)
 
