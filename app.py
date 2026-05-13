@@ -1,5 +1,5 @@
 """
-Receipt bot — free edition, runs on Google Gemini's free tier + Modal's free tier.
+Receipt bot — Claude + Modal edition.
 """
 
 import modal
@@ -42,7 +42,10 @@ def telegram_webhook(update: dict):
     payload = {"chat_id": chat_id}
 
     if "photo" in message:
-        largest = max(message["photo"], key=lambda p: p["file_size"])
+        largest = max(
+            message["photo"],
+            key=lambda p: p.get("file_size") or p.get("width", 0) * p.get("height", 0),
+        )
         payload["type"] = "photo"
         payload["file_id"] = largest["file_id"]
         payload["caption"] = message.get("caption", "")

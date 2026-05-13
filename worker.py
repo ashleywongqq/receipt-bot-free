@@ -1,10 +1,10 @@
 """
-Worker logic for receipt-bot (free / Gemini edition).
+Worker logic for receipt-bot.
 
-Same flows as v5 but every LLM call goes through tools/llm.py.
+Every LLM call goes through tools/llm.py so the model/provider details stay
+isolated from the bot's business logic.
 """
 
-import base64
 import json
 import os
 from datetime import datetime, timedelta
@@ -99,7 +99,8 @@ Decide what they want. Reply with ONE of these JSON shapes (no prose, no fences)
    {{"intent": "query"}}
 
 6. Correcting a vendor's classification:
-   {{"intent": "correction"}}
+   {{"intent": "correction", "vendor": "H&M",
+     "category": null, "subcategory": null, "tier": "value"}}
 
 7. Wanting to undo/delete:
    {{"intent": "undo"}}
@@ -177,7 +178,7 @@ def _download_telegram_file(file_id: str) -> tuple[bytes, str]:
 
 
 def _parse_json(text: str) -> dict:
-    """Strip code fences if present, then parse. Gemini sometimes adds fences."""
+    """Strip code fences if present, then parse."""
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
@@ -398,6 +399,12 @@ def _handle_split(intent: dict) -> str:
 
     if debtors and not n_people:
         n_people = len(debtors) + 1
+    try:
+        n_people = int(n_people)
+    except (TypeError, ValueError):
+        return "⚠️ couldn't figure out how many people were in the split."
+    if n_people < 2:
+        return "⚠️ splits need at least 2 people."
 
     amount = float(amount)
     user_share = round(amount / n_people, 2)
@@ -459,6 +466,13 @@ def _handle_split(intent: dict) -> str:
 def _handle_payback(intent: dict) -> str:
     who = (intent.get("who") or "").strip()
     pending_id = intent.get("pending_id")
+    if pending_id in ("", "null"):
+        pending_id = None
+    if pending_id is not None:
+        try:
+            pending_id = int(pending_id)
+        except (TypeError, ValueError):
+            return "⚠️ pending id should be a number."
     if not who:
         return "⚠️ who paid you back?"
 
@@ -486,6 +500,19 @@ def _handle_payback(intent: dict) -> str:
         return _decrement_one_share(eligible[0], who)
 
     return f"⚠️ couldn't find '{who}' on any pending charge."
+
+
+def _handle_correction(intent: dict) -> str:
+    vendor = (intent.get("vendor") or "").strip()
+    category = (intent.get("category") or "").strip()
+    subcategory = (intent.get("subcategory") or "").strip()
+    tier = (intent.get("tier") or "").strip()
+
+    if not vendor:
+        return "⚠️ which vendor should I update?"
+    if not any((category, subcategory, tier)):
+        return "⚠️ what should I change for that vendor?"
+    return db.vendor_correct(vendor, category, subcategory, tier)
 
 
 def _decrement_one_share(charge: dict, who: str) -> str:
@@ -516,11 +543,11 @@ def _decrement_one_share(charge: dict, who: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Query path — small loop with Gemini and SQL
+# Query path — small loop with the LLM and SQL
 # ---------------------------------------------------------------------------
 
 def _agent_loop(user_text: str, max_turns: int = 4) -> str:
-    """Multi-step query: ask Gemini for SQL, run it, ask Gemini to interpret."""
+    """Multi-step query: ask the LLM for SQL, run it, then ask it to interpret."""
     today = datetime.now().strftime("%Y-%m-%d")
     history = [
         f"System: {QUERY_SYSTEM_PROMPT}",
@@ -555,6 +582,12 @@ def _agent_loop(user_text: str, max_turns: int = 4) -> str:
 # ---------------------------------------------------------------------------
 
 def handle_text(user_text: str) -> str:
+    normalized = user_text.strip().lower()
+    if normalized in {"db stats", "stats"}:
+        return db.db_info()
+    if normalized in {"vendors", "vendor list", "known vendors"}:
+        return db.vendor_list()
+
     intent = _classify_intent(user_text)
     kind = intent.get("intent", "other")
 
@@ -568,6 +601,8 @@ def handle_text(user_text: str) -> str:
         return db.list_pending_formatted()
     if kind == "undo":
         return db.undo_last()
+    if kind == "correction":
+        return _handle_correction(intent)
     return _agent_loop(user_text)
 
 
@@ -615,7 +650,7 @@ def build_nudges() -> list[str]:
         )
         if unpaid_names:
             msg += f"\nWaiting on: {', '.join(unpaid_names)}"
-        msg += f"\n_Reply 'X paid' or 'settle pending {charge['id']}'_"
+        msg += f"\nReply 'X paid' or 'settle pending {charge['id']}'"
         messages.append(msg)
         db.mark_nudged(charge["id"])
     return messages

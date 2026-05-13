@@ -10,9 +10,9 @@ def send_message(chat_id: str, text: str) -> None:
     try:
         r = httpx.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            json={"chat_id": chat_id, "text": text},
             timeout=10,
         )
-        print(f"[SEND] response: {r.status_code}")
+        print(f"[SEND] response: {r.status_code} {r.text[:200]}")
     except Exception as e:
         print(f"[SEND] error: {e}")

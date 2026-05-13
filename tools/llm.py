@@ -1,32 +1,57 @@
-"""
-LLM wrapper around Claude API.
-
-We keep the surface area small: three functions the worker actually uses.
-- generate_text(prompt) → str
-- generate_with_image(prompt, image_bytes, mime) → str
-- generate_with_search(prompt) → str   (doesn't use search, just calls generate_text)
-
-All three return raw strings; JSON parsing happens in worker.py as before.
-"""
-
 import os
-from anthropic import Anthropic
+from functools import lru_cache
 
-# Configure once on import
-client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+try:
+    from anthropic import Anthropic
+except ImportError:  # Lets local DB-only checks import the project without deps.
+    Anthropic = None
 
-# Model for everything. Haiku 4 is the latest lightweight model.
-MODEL_NAME = "claude-haiku-4-0"
+"""
+LLM wrapper around the Anthropic Messages API.
+
+The worker only needs three calls:
+- generate_text(prompt) -> str
+- generate_with_image(prompt, image_bytes, mime) -> str
+- generate_with_search(prompt) -> str
+
+All three return raw strings; JSON parsing happens in worker.py.
+"""
+
+# Haiku 3.5 is Anthropic's current lightweight Haiku model ID. Allow an env
+# override so the deployed bot can move to Sonnet/Opus without a code change.
+DEFAULT_MODEL_NAME = "claude-3-5-haiku-20241022"
+MODEL_NAME = os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL_NAME)
+
+
+@lru_cache(maxsize=1)
+def _client():
+    if Anthropic is None:
+        raise RuntimeError(
+            "The `anthropic` package is not installed. "
+            "Run `pip install -r requirements.txt`."
+        )
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "ANTHROPIC_API_KEY is missing. Create the Modal secret "
+            "`anthropic-api-key` with ANTHROPIC_API_KEY=sk-ant-..."
+        )
+    return Anthropic(api_key=api_key)
+
+
+def _response_text(resp) -> str:
+    chunks = [getattr(block, "text", "") for block in resp.content]
+    return "".join(chunks).strip()
 
 
 def generate_text(prompt: str, max_tokens: int = 1024) -> str:
     """Plain text → text."""
-    resp = client.messages.create(
+    resp = _client().messages.create(
         model=MODEL_NAME,
         max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
-    return resp.content[0].text
+    return _response_text(resp)
 
 
 def generate_with_image(prompt: str, image_bytes: bytes, mime: str,
@@ -34,7 +59,7 @@ def generate_with_image(prompt: str, image_bytes: bytes, mime: str,
     """Image + text → text. Used for receipt OCR."""
     import base64
     image_data = base64.standard_b64encode(image_bytes).decode("utf-8")
-    resp = client.messages.create(
+    resp = _client().messages.create(
         model=MODEL_NAME,
         max_tokens=max_tokens,
         messages=[
@@ -57,7 +82,7 @@ def generate_with_image(prompt: str, image_bytes: bytes, mime: str,
             }
         ],
     )
-    return resp.content[0].text
+    return _response_text(resp)
 
 
 def generate_with_search(prompt: str, max_tokens: int = 512) -> str:

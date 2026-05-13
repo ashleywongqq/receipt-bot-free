@@ -358,7 +358,7 @@ def db_info() -> str:
             "FROM pending_charges WHERE settled = 0"
         ).fetchone()
     out = (
-        f"📊 *DB stats*\n"
+        f"📊 DB stats\n"
         f"Receipts: {receipts}\n"
         f"Vendors: {vendors}\n"
         f"Date range: {first or '—'} to {last or '—'}\n"
@@ -422,7 +422,7 @@ def list_pending_formatted() -> str:
         return "No pending charges. 🎉"
 
     total_owed_usd = sum(c["owed_usd"] for c in open_charges)
-    lines = [f"💰 *{len(open_charges)} pending* — ${total_owed_usd:,.2f} USD owed to you:\n"]
+    lines = [f"💰 {len(open_charges)} pending — ${total_owed_usd:,.2f} USD owed to you:\n"]
 
     for c in open_charges:
         debtors = _debtors_for(c["id"])

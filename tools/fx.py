@@ -10,8 +10,9 @@ We cache rates in-memory per process; for a personal bot this is plenty.
 Modal containers are short-lived so the cache resets often, which is fine.
 """
 
+from datetime import date, timedelta
+
 import httpx
-from datetime import datetime, date
 
 BASE_URL = "https://api.frankfurter.dev/v1"
 
@@ -52,10 +53,10 @@ def get_rate(from_currency: str, to_currency: str, on_date: str) -> float:
     if key in _cache:
         return _cache[key]
 
-    # Frankfurter doesn't have data for future dates or today (publishes next day)
-    # Clamp to yesterday at latest
+    # Frankfurter can lag today's rates, so clamp today/future to yesterday.
     today_str = date.today().isoformat()
-    fetch_date = on_date if on_date < today_str else today_str
+    yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+    fetch_date = on_date if on_date < today_str else yesterday_str
 
     r = httpx.get(
         f"{BASE_URL}/{fetch_date}",

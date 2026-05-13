@@ -1,13 +1,13 @@
-# Receipt Tracker Bot — Free Edition 🆓
+# Receipt Tracker Bot — Claude Edition
 
-A personal expense bot that runs on **completely free tiers** of everything:
-- 🧠 **Google Gemini API** (1,500 free requests/day — way more than personal use)
-- ☁️ **Modal** ($30/month free compute — uses pennies)
+A personal expense bot that uses:
+- 🧠 **Anthropic Claude API** for text + receipt image understanding
+- ☁️ **Modal** for serverless compute/storage
 - 💬 **Telegram** (always free)
 - 💱 **Frankfurter** (free FX rates)
 - 💾 **SQLite** on Modal's free storage
 
-No credit card needed anywhere. No monthly fees. Just sign up for accounts.
+Modal, Telegram, Frankfurter, and SQLite can stay within free tiers for personal use. Anthropic API usage is separate and depends on your Anthropic account/billing setup.
 
 ## What it does
 
@@ -34,15 +34,14 @@ No credit card needed anywhere. No monthly fees. Just sign up for accounts.
 
 You need Python 3.11+ installed. Check with `python3 --version`. If not, get it from [python.org](https://www.python.org/downloads/).
 
-### Chunk 2 — Get a Google Gemini API key (5 min)
+### Chunk 2 — Get an Anthropic API key (5 min)
 
-1. Go to [aistudio.google.com](https://aistudio.google.com)
-2. Sign in with **any Google account** (personal Gmail is fine)
-3. Click "Get API key" (top left or via the key icon)
-4. Click "Create API key" → "Create API key in new project" if asked
-5. Copy the key (starts with `AIza...`). Save it somewhere safe.
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create or sign in to your Anthropic account.
+3. Create an API key.
+4. Copy the key (starts with `sk-ant-...`). Save it somewhere safe.
 
-**That's it.** No payment method, no credit card. The free tier gives you 1,500 requests/day on Gemini 2.0 Flash, which includes vision.
+The code defaults to Claude Haiku 3.5 (`claude-3-5-haiku-20241022`) and supports both text and receipt images.
 
 ### Chunk 3 — Create a Telegram bot (10 min)
 
@@ -75,7 +74,7 @@ You need Python 3.11+ installed. Check with `python3 --version`. If not, get it 
 Run these in Terminal, replacing `...` with your real values:
 
 ```bash
-modal secret create gemini-api-key GEMINI_API_KEY=AIza...your-key...
+modal secret create anthropic-api-key ANTHROPIC_API_KEY=sk-ant-...your-key...
 ```
 
 ```bash
@@ -148,9 +147,9 @@ Snap a receipt photo, send it. Optional caption like `category: groceries` to ov
 
 ## Limits to be aware of
 
-- **15 requests per minute**, **1,500/day** on the free Gemini tier. You'd have to use this very heavily to ever hit either.
-- **Photo OCR**: Gemini 2.0 Flash is genuinely good but not perfect. Expect ~90% accuracy on clean receipts. The "undo" button is your friend.
-- **Web search grounding** may have regional limits — if Gemini Search isn't available in your region, the bot silently falls back to classification without search. Still works fine.
+- **Anthropic API limits/costs** depend on your account and chosen model.
+- **Photo OCR**: Claude is good but not perfect. Expect occasional misses on blurry or weird receipts. The "undo" button is your friend.
+- **Web search grounding** is not used here; vendor classification falls back to ordinary model classification.
 
 ---
 
@@ -184,32 +183,23 @@ modal secret create telegram-bot TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
 modal deploy app.py
 ```
 
-**Gemini errors.** Check that your `GEMINI_API_KEY` secret is set correctly in Modal. Test by running `modal run app.py::sql --query "SELECT 1"` — if that works, Modal is fine and only the LLM call is failing.
+**Claude errors.** Check that your `ANTHROPIC_API_KEY` secret is set correctly in Modal. Test by running `modal run app.py::sql --query "SELECT 1"` — if that works, Modal is fine and only the LLM call is failing.
 
 **Wrong chat ID.** Bot ignores messages from any chat other than yours. Send your bot one more message, then re-check the `getUpdates` URL.
 
 ---
 
-## Switching to Claude later (if you ever want to)
+## Switching Models
 
-If you decide receipt accuracy matters enough to pay a few bucks a month for Claude's better vision:
-
-1. Get an Anthropic API key
-2. `pip install anthropic` (already in their lib)
-3. Replace `tools/llm.py` with an Anthropic version — I can write that 30-line file in a heartbeat
-4. `modal secret create anthropic-api-key ANTHROPIC_API_KEY=sk-ant-...`
-5. Update the secret name in `app.py`
-6. Redeploy
-
-Nothing else changes. All your data persists.
+The default model lives in `tools/llm.py`. To try another Anthropic model without editing code, add `ANTHROPIC_MODEL=...` to the `anthropic-api-key` Modal secret and redeploy.
 
 ---
 
 ## Costs (the whole truth)
 
-- Gemini API: $0/month within free tier (1500 requests/day)
-- Modal: $0/month within free tier ($30/month compute free)
+- Anthropic API: usage-based; check your Anthropic console
+- Modal: $0/month within free tier for light personal use
 - Telegram: $0/month, always
 - Frankfurter FX: $0/month, always
 
-**Total: $0.** Forever, for personal use.
+For personal use, infrastructure should be tiny; Claude usage is the main variable cost.

@@ -7,7 +7,7 @@ A personal expense tracker bot that runs on Telegram, using Claude API for LLM p
 - **Frontend**: Telegram (user sends messages/photos)
 - **Compute**: Modal (serverless functions)
 - **Storage**: SQLite on Modal Volume
-- **LLM**: Claude Haiku 4.0 API
+- **LLM**: Anthropic Claude API (default: Claude Haiku 3.5)
 - **Code**: Python 3.11
 
 ---
@@ -68,8 +68,9 @@ fastapi[standard]>=0.115.0
   - Used for vendor classification
 
 **Key Implementation**:
-- Initialize `Anthropic` client once with API key
-- Use `claude-haiku-4-0` model
+- Lazily initialize and cache the `Anthropic` client with API key
+- Use `claude-3-5-haiku-20241022` by default
+- Allow `ANTHROPIC_MODEL` to override the model without code changes
 - Handle base64 encoding for images
 - Return raw text (JSON parsing happens in worker.py)
 
@@ -331,7 +332,8 @@ Create Docker image with:
 
 ### 5.1 send_message(chat_id: str, text: str)
 - POST to Telegram sendMessage API
-- Parameters: chat_id, text, parse_mode=Markdown
+- Parameters: chat_id, text
+- Keep replies plain text so user-supplied vendor names cannot break Telegram Markdown parsing
 - Handle errors gracefully
 - Print for debugging
 
@@ -430,4 +432,3 @@ modal run app.py::set_telegram_webhook
 5. Add budget alerts
 6. Multi-currency display options
 7. CSV export of expenses
-
