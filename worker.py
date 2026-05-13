@@ -662,8 +662,28 @@ def _agent_loop(user_text: str, max_turns: int = 4) -> str:
 # Entry point
 # ---------------------------------------------------------------------------
 
+START_MESSAGE = """Welcome to Receipt Dog.
+
+Send receipt photo, or just type your spend like:
+
+12 souvla
+$8 kopi
+45 uber
+
+I help you log, tag, convert currency, track split bills, and answer things like:
+
+how much I spend this week?
+who still owe me?
+
+Receipts messy never mind. I go fetch."""
+
+
 def handle_text(user_text: str) -> str:
     normalized = user_text.strip().lower()
+    if normalized == "/start" or normalized.startswith("/start "):
+        return START_MESSAGE
+    if normalized in {"/help", "help"}:
+        return START_MESSAGE
     if normalized in {"db stats", "stats"}:
         return db.db_info()
     if normalized in {"vendors", "vendor list", "known vendors"}:
