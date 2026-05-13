@@ -7,6 +7,7 @@ isolated from the bot's business logic.
 
 import json
 import os
+import re
 from datetime import datetime, timedelta
 
 import httpx
@@ -309,6 +310,86 @@ def handle_photo(file_id: str, caption: str = "") -> str:
 # Text path
 # ---------------------------------------------------------------------------
 
+_CURRENCY_RE = r"(?:US\$|S\$|SG\$|HK\$|A\$|AU\$|C\$|CA\$|\$|£|€|¥|USD|SGD|GBP|EUR|JPY|HKD|AUD|CAD)"
+_AMOUNT_RE = r"\d+(?:[.,]\d{1,2})?"
+_MEAL_WORDS = {"breakfast", "lunch", "dinner", "snack", "coffee", "drinks"}
+_QUICK_LOG_BLOCKERS = (
+    "?", " people", " split", " with ", " owed", " owe", " paid", " payback",
+    " settle", " pending", " list", " who ", " how ", " what ", " average",
+    " total", " month", " year", " week", " spent", " spend", " undo",
+    " fix ", " correct ", " sent",
+)
+
+
+def _display_vendor(raw: str) -> str:
+    words = raw.strip(" ,.;").split()
+    cleaned = []
+    for word in words:
+        if any(c.isupper() for c in word) or "&" in word:
+            cleaned.append(word)
+        else:
+            cleaned.append(word.capitalize())
+    return " ".join(cleaned)
+
+
+def _split_vendor_and_items(raw_vendor: str) -> tuple[str, list[str]]:
+    words = raw_vendor.strip().split()
+    if len(words) > 1 and words[-1].lower() in _MEAL_WORDS:
+        return _display_vendor(" ".join(words[:-1])), [words[-1].lower()]
+    return _display_vendor(raw_vendor), []
+
+
+def _quick_log_from_text(user_text: str) -> dict | None:
+    text = " ".join(user_text.strip().split())
+    if not text:
+        return None
+    lowered = f" {text.lower()} "
+    if any(blocker in lowered for blocker in _QUICK_LOG_BLOCKERS):
+        return None
+
+    patterns = [
+        rf"^(?P<currency>{_CURRENCY_RE})\s*(?P<amount>{_AMOUNT_RE})\s+(?P<vendor>.+)$",
+        rf"^(?P<amount>{_AMOUNT_RE})\s+(?:(?P<currency>{_CURRENCY_RE})\s+)?(?P<vendor>.+)$",
+        rf"^(?P<vendor>.+?)\s+(?P<amount>{_AMOUNT_RE})\s*(?P<currency>{_CURRENCY_RE})?$",
+    ]
+    for pattern in patterns:
+        match = re.match(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
+        vendor, items = _split_vendor_and_items(match.group("vendor"))
+        if not vendor:
+            return None
+        return {
+            "intent": "log",
+            "amount": float(match.group("amount").replace(",", ".")),
+            "currency": match.groupdict().get("currency"),
+            "vendor": vendor,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "items": items,
+            "notes": "",
+        }
+    return None
+
+
+def _log_intent_matches_text(intent: dict, user_text: str) -> bool:
+    text = user_text.lower()
+    amount = intent.get("amount")
+    vendor = (intent.get("vendor") or "").strip().lower()
+    if amount is None or not vendor:
+        return False
+
+    text_numbers = [float(n.replace(",", ".")) for n in re.findall(_AMOUNT_RE, text)]
+    try:
+        amount_value = float(amount)
+    except (TypeError, ValueError):
+        return False
+    if not any(abs(amount_value - n) < 0.001 for n in text_numbers):
+        return False
+
+    vendor_tokens = [t for t in re.findall(r"[a-z0-9]+", vendor) if len(t) > 1]
+    return bool(vendor_tokens and vendor_tokens[0] in text)
+
+
 def _classify_intent(user_text: str) -> dict:
     today = datetime.now().strftime("%Y-%m-%d")
     prompt = INTENT_PROMPT_TEMPLATE.format(
@@ -588,10 +669,12 @@ def handle_text(user_text: str) -> str:
     if normalized in {"vendors", "vendor list", "known vendors"}:
         return db.vendor_list()
 
-    intent = _classify_intent(user_text)
+    intent = _quick_log_from_text(user_text) or _classify_intent(user_text)
     kind = intent.get("intent", "other")
 
     if kind == "log":
+        if not _log_intent_matches_text(intent, user_text):
+            return "⚠️ I couldn't safely parse that spend. Try `12 souvla`."
         return _quick_log(intent, user_text)
     if kind == "split":
         return _handle_split(intent)

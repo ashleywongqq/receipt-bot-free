@@ -30,7 +30,7 @@ secrets = [
 @app.function(image=image, secrets=secrets, volumes=VOLUME_MOUNTS)
 @modal.fastapi_endpoint(method="POST", label="telegram")
 def telegram_webhook(update: dict):
-    import os
+    import os, time
     message = update.get("message") or update.get("edited_message")
     if not message:
         return {"ok": True}
@@ -39,7 +39,12 @@ def telegram_webhook(update: dict):
     if chat_id != os.environ["TELEGRAM_CHAT_ID"]:
         return {"ok": True}
 
-    payload = {"chat_id": chat_id}
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message.get("message_id"),
+        "telegram_date": message.get("date"),
+        "enqueued_at": time.time(),
+    }
 
     if "photo" in message:
         largest = max(
@@ -66,37 +71,51 @@ def telegram_webhook(update: dict):
 
 @app.function(image=image, secrets=secrets, volumes=VOLUME_MOUNTS, timeout=120)
 def process_message():
+    import time
     from worker import handle_photo, handle_text
     from telegram import send_message
     from tools import db
 
     db.init_db()
 
-    try:
-        msg = inbox.get(timeout=1)
-    except Exception:
-        print("[process_message] No message in queue")
-        return
+    processed = 0
 
-    chat_id = msg["chat_id"]
-    print(f"[process_message] Processing message from {chat_id}: {msg}")
-    try:
-        if msg["type"] == "photo":
-            send_message(chat_id, "📸 reading receipt…")
-            reply = handle_photo(msg["file_id"], msg.get("caption", ""))
-        else:
-            reply = handle_text(msg["text"])
-    except Exception as e:
-        reply = f"⚠️ error: {type(e).__name__}: {e}"
-        print(f"[process_message] Error: {reply}")
+    for _ in range(20):
+        try:
+            msg = inbox.get(timeout=1 if processed == 0 else 0.1)
+        except Exception:
+            if processed == 0:
+                print("[process_message] No message in queue")
+            return
 
-    volume.commit()
+        enqueued_at = msg.get("enqueued_at")
+        if enqueued_at is None:
+            print(f"[process_message] Dropping legacy queued message: {msg}")
+            continue
+        if time.time() - float(enqueued_at) > 600:
+            print(f"[process_message] Dropping stale queued message: {msg}")
+            continue
 
-    print(f"[process_message] Sending reply: {reply[:100]}")
-    for chunk in [reply[i:i + 4000] for i in range(0, len(reply), 4000)]:
-        print(f"[process_message] Sending chunk to {chat_id}")
-        send_message(chat_id, chunk)
-    print(f"[process_message] Done")
+        chat_id = msg["chat_id"]
+        print(f"[process_message] Processing message from {chat_id}: {msg}")
+        try:
+            if msg["type"] == "photo":
+                send_message(chat_id, "📸 reading receipt…")
+                reply = handle_photo(msg["file_id"], msg.get("caption", ""))
+            else:
+                reply = handle_text(msg["text"])
+        except Exception as e:
+            reply = f"⚠️ error: {type(e).__name__}: {e}"
+            print(f"[process_message] Error: {reply}")
+
+        volume.commit()
+
+        print(f"[process_message] Sending reply: {reply[:100]}")
+        for chunk in [reply[i:i + 4000] for i in range(0, len(reply), 4000)]:
+            print(f"[process_message] Sending chunk to {chat_id}")
+            send_message(chat_id, chunk)
+        processed += 1
+        print(f"[process_message] Done")
 
 
 @app.function(image=image, secrets=secrets, volumes=VOLUME_MOUNTS)
